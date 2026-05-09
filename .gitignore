@@ -1,0 +1,118 @@
+# =========================
+
+# Runtime data
+
+# =========================
+
+data/
+logs/
+
+# =========================
+
+# Ollama
+
+# =========================
+
+data/ollama/models/
+data/ollama/cache/
+data/ollama/history/
+
+# SSH keys
+
+data/ollama/id_ed25519
+data/ollama/id_ed25519.pub
+
+# =========================
+
+# Open WebUI
+
+# =========================
+
+data/open-webui/cache/
+data/open-webui/uploads/
+data/open-webui/vector_db/
+
+# SQLite databases
+
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+
+# =========================
+
+# AI / Embeddings / HF cache
+
+# =========================
+
+*.safetensors
+*.onnx
+*.bin
+*.h5
+*.ot
+*.pt
+*.pth
+
+# HuggingFace / transformers cache
+
+.cache/
+huggingface/
+xet/
+
+# =========================
+
+# Logs
+
+# =========================
+
+*.log
+
+# =========================
+
+# Environment / Secrets
+
+# =========================
+
+.env
+.env.local
+.env.production
+
+# =========================
+
+# OS / IDE
+
+# =========================
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+# =========================
+
+# Python
+
+# =========================
+
+**pycache**/
+*.pyc
+*.pyo
+
+# =========================
+
+# Node
+
+# =========================
+
+node_modules/
+
+# =========================
+
+# Temporary
+
+# =========================
+
+tmp/
+temp/
+*.tmp

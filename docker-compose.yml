@@ -1,0 +1,85 @@
+services:
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+
+    restart: unless-stopped
+
+    cpus: 8
+    mem_limit: 12g
+    memswap_limit: 12g
+
+    environment:
+      OLLAMA_NUM_PARALLEL: 2
+      OLLAMA_MAX_LOADED_MODELS: 1
+      OLLAMA_KEEP_ALIVE: 5m
+
+    ports:
+      - "127.0.0.1:11434:11434"
+
+    volumes:
+      - ./data/ollama:/root/.ollama
+      - ./logs/ollama:/logs
+
+    networks:
+      - ai-network
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+
+    restart: unless-stopped
+
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+    cpus: 2
+    mem_limit: 2g
+
+    ports:
+      - "3000:8080"
+
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+
+    security_opt:
+      - no-new-privileges:true
+
+    volumes:
+      - ./data/open-webui:/app/backend/data
+      - ./logs/open-webui:/app/backend/logs
+
+    networks:
+      - ai-network
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+networks:
+  ai-network:
+    driver: bridge
