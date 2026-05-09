@@ -31,12 +31,6 @@ services:
         max-size: "5m"
         max-file: "2"
 
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:11434/api/tags || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -45,8 +39,7 @@ services:
     restart: unless-stopped
 
     depends_on:
-      ollama:
-        condition: service_healthy
+      - ollama
 
     cpus: 2
     mem_limit: 2g
