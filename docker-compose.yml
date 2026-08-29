@@ -1,19 +1,27 @@
 services:
 
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:0.11.4
     container_name: ollama
-
     restart: unless-stopped
 
+    # CPU-only (8 cores, 12GB). Descomente deploy.resources para GPU NVIDIA
     cpus: 8
     mem_limit: 12g
     memswap_limit: 12g
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
 
     environment:
-      OLLAMA_NUM_PARALLEL: 2
-      OLLAMA_MAX_LOADED_MODELS: 1
-      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
+      OLLAMA_HOST: 0.0.0.0
 
     ports:
       - "127.0.0.1:11434:11434"
@@ -25,6 +33,13 @@ services:
     networks:
       - ai-network
 
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
     logging:
       driver: json-file
       options:
@@ -32,14 +47,91 @@ services:
         max-file: "2"
 
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: qdrant
     restart: unless-stopped
 
+    cpus: 2
+    mem_limit: 2g
+
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+
+    networks:
+      - ai-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ai-stack-api
+    restart: unless-stopped
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+
+    cpus: 2
+    mem_limit: 2g
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      QDRANT_URL: http://qdrant:6333
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      LLM_MODEL: ${LLM_MODEL:-phi3}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+    volumes:
+      - ./data/api:/data
+      - ./examples:/app/examples:ro
+      - ./logs/api:/logs
+
+    networks:
+      - ai-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.6.18
+    container_name: open-webui
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
 
     cpus: 2
     mem_limit: 2g
@@ -48,7 +140,10 @@ services:
       - "3000:8080"
 
     environment:
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      # RAG desabilitado aqui (tratado pela API dedicada)
+      ENABLE_RAG_HYBRID_SEARCH: "false"
+      ENABLE_WEB_SEARCH: "false"
 
     security_opt:
       - no-new-privileges:true
@@ -60,19 +155,23 @@ services:
     networks:
       - ai-network
 
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
 
 networks:
   ai-network:
     driver: bridge
+
+volumes:
+  qdrant_storage:
