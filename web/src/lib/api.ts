@@ -23,3 +23,10 @@ export async function queryRag(question: string, top_k = 4) {
   if (!r.ok) throw new Error(await r.text());
   return r.json() as Promise<import("@/types/api").QueryResponse>;
 }
+export async function ingestUpload(file: File) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch(`${BASE}/ingest/upload`, { method: "POST", body: fd });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
