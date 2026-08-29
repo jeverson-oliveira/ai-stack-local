@@ -66,10 +66,11 @@ services:
       - ai-network
 
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/health || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /healthz HTTP/1.0\\r\\n\\r\\n\" >&3 && grep -q \"200\" <&3'"]
       interval: 20s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
     logging:
       driver: json-file
@@ -112,7 +113,7 @@ services:
       - ai-network
 
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health | grep -q ok || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 3
@@ -156,11 +157,11 @@ services:
       - ai-network
 
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
 
     logging:
       driver: json-file
