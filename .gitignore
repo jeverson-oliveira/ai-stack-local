@@ -116,3 +116,12 @@ node_modules/
 tmp/
 temp/
 *.tmp
+
+# =========================
+
+# Build
+
+# =========================
+
+node_modules
+.next
